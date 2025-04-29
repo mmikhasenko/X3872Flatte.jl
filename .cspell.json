@@ -1,0 +1,20 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": ["physics"],
+  "dictionaryDefinitions": [
+    {
+      "name": "physics",
+      "path": "./.cspell/physics.dict.txt",
+      "description": "Physics-specific terms"
+    }
+  ],
+  "ignorePaths": ["node_modules", "Manifest.toml", "*.pdf", "*.dat", "*.root"],
+  "allowCompoundWords": true,
+  "patterns": [
+    {
+      "name": "julia_variables",
+      "pattern": "/[a-zA-Z_][a-zA-Z0-9_]*[!₀-₉ᵃ-ᶻ′]*/g"
+    }
+  ]
+}

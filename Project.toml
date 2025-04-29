@@ -1,0 +1,13 @@
+name = "X3872Flatte"
+uuid = "1d4d2ca6-8d88-4659-b015-94c7f1db6ef2"
+authors = ["Mikhail Mikhasenko <mikhail.mikhasenko@cern.ch>"]
+version = "0.1.0"
+
+[deps]
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+Optim = "1.12.0"
