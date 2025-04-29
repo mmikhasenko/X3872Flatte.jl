@@ -4,13 +4,11 @@ A Julia package for modeling the $\chi_{c1}(3872)$ state (formerly known as X(38
 
 ## Description
 
-This package implements a Flatte model for the $\chi_{c1}(3872)$ exotic hadron state, based on the parametrization described in [arXiv:0704.0605](https://arxiv.org/abs/0704.0605). The model accounts for the peculiar properties of this state, which lies extremely close to the $D^{*0}D^0$ threshold and exhibits both $J/\psi\pi\pi$ and $D^{*0}D^0$ decay modes.
-
-Key features:
-- Implementation of the Flatte model amplitude for $\chi_{c1}(3872)$
-- Calculation of pole positions and scattering parameters
-- Coupling to various decay channels including $J/\psi\rho$, $J/\psi\omega$, and $D^{*0}D^0$
-- Branching ratio calculations for different decay modes
+This package implements a Flatte model for the $\chi_{c1}(3872)$ exotic hadron state, based on the parametrization described in [arXiv:0704.0605](https://arxiv.org/abs/0704.0605).
+It's a non-relativistic Breit-Wigner function that parametrizes the energy-dependent width by a sum of
+- the $D^{*0}D^0$, $D^{*+}D^-$ channels with equal coupling strength, 
+- the $j/ψ ρ$ and $j/ψ ω$ channels with $2π$ and $3π$ resonances, and
+- a constant inelastic contribution accumulating all other channels.
 
 ## Installation
 
