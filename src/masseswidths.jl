@@ -19,12 +19,6 @@ const mDˣ⁰ = 2006.85e-3  # GeV
 m2e(m) = (m - mDˣ⁰ - mD⁰) * 1e3
 e2m(E) = E * 1e-3 + mDˣ⁰ + mD⁰
 
-# widths
-const ΓJψ = 92.9e-6 # GeV
-const Γχc₁ = 1.19e-3 #Gev
-const ΓD⁰ = 1.605022114e-12 #GeV (6.582119569e−16)/(4.101e-13)*1e-9
-const ΓDˣ⁰ = 1.9 # GeV
-
 
 # 
 const fm_times_GeV = 197.3269804e-3
