@@ -1,7 +1,7 @@
 name = "X3872Flatte"
 uuid = "1d4d2ca6-8d88-4659-b015-94c7f1db6ef2"
 authors = ["Mikhail Mikhasenko <mikhail.mikhasenko@cern.ch>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
