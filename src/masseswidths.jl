@@ -19,6 +19,8 @@ const mDˣ⁰ = 2006.85e-3  # GeV
 m2e(m) = (m - mDˣ⁰ - mD⁰) * 1e3
 e2m(E) = E * 1e-3 + mDˣ⁰ + mD⁰
 
+const ΓDˣ⁺ = 83.4e-6
+const ΓDˣ⁰ = 55.2e-6
 
 # 
 const fm_times_GeV = 197.3269804e-3
