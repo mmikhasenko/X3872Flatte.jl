@@ -16,3 +16,11 @@ end
     @test isapprox(E_pole, 0.0134358620 - 0.1152417753im, atol = 1e-8)
 end
 
+
+@testset "Reparametrize Flatte" begin
+    g, Γ₀_MeV, Ef_MeV = 0.13, 1.8, -8.8
+    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g)
+    model = ReparametrizeFlatte((; g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0))
+    @test model.Ef_MeV ≈ Ef_MeV
+end
+

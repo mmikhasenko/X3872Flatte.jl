@@ -12,7 +12,6 @@ const mω = 782.65e-3 #Gev
 const Γρ = 149.1e-3 # GeV Neutral only width
 const Γω = 8.68e-3 #GeV
 
-
 const mDˣ⁺ = 2010.26e-3  # GeV 
 const mDˣ⁰ = 2006.85e-3  # GeV
 

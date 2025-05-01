@@ -2,6 +2,7 @@ module X3872Flatte
 
 import Base: denominator
 using Parameters
+using NLsolve
 using QuadGK
 using Optim
 
@@ -9,7 +10,9 @@ export e2m, m2e
 export fm_times_GeV
 include("masseswidths.jl")
 
-export Model, FlatteModel
+export FlatteModel
+export ReparametrizeFlatte
+export compute_corrected_Ef
 export AJψππ, denominator
 export scattering_parameters
 export pole_position

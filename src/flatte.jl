@@ -1,6 +1,3 @@
-
-abstract type Model end
-
 """
     FlatteModel(Ef, g, Γ₀)
 
@@ -10,7 +7,7 @@ Parameters contained in the structure are
  - g : coupling to the Dˣ⁰D⁰
  - Γ₀_MeV: contribution to the width from other inelastic channels
 """
-@with_kw struct FlatteModel <: Model
+@with_kw struct FlatteModel
     Ef_MeV::Float64
     g::Float64
     Γ₀_MeV::Float64
@@ -18,6 +15,61 @@ Parameters contained in the structure are
     fω::Float64
 end
 
+"""
+    shift_Ef(g, Ef_corr)
+
+Calculates the Ef value in MeV from the corrected energy parameter and coupling by adding dispersive contribution from the charged DxD channel to it. 
+
+# Arguments
+- `g`: Coupling parameter to the Dˣ⁰D⁰ channel
+- `Ef_corr`: Energy parameter in MeV
+
+# Returns
+- `Ef_MeV::Float64`: Shifted effective energy parameter in MeV
+"""
+function shift_Ef(g, Ef_corr)
+    _model = FlatteModel(; Ef_MeV = 0.0, g, Γ₀_MeV = 0.0, fρ = 0.0, fω = 0.0)
+    Ef_GeV = denominator(_model, Ef_corr) |> real
+    Ef_MeV = 1e3 * Ef_GeV
+    return Ef_MeV
+end
+
+"""
+    ReparametrizeFlatte(pars_corr)
+
+Creates a FlatteModel instance using corrected Ef parameter instead of Ef_MeV along with the other parameters.
+
+# Arguments
+- `pars_corr::NamedTuple`: Contains `Ef_corr`, `g`, `Γ₀_MeV`, `fρ`, and `fω` parameters
+
+# Returns
+- `FlatteModel`: Model with physical parameters
+"""
+function ReparametrizeFlatte(pars_corr)
+    @unpack Ef_corr, g, Γ₀_MeV, fρ, fω = pars_corr
+    Ef_MeV = shift_Ef(g, Ef_corr)
+    return FlatteModel(; Ef_MeV, g, Γ₀_MeV, fρ, fω)
+end
+
+"""
+    compute_corrected_Ef(Ef, g, Ef_corr_guess = -0.04)
+
+Computes the corrected energy parameter by numerically solving the inverse relationship
+between physical Ef and corrected Ef_corr parameters.
+
+# Arguments
+- `Ef::Float64`: Target physical energy parameter in MeV
+- `g::Float64`: Coupling parameter to the Dˣ⁰D⁰ channel
+- `Ef_corr_guess::Float64`: Initial guess for the numerical solver (default: -0.04)
+
+# Returns
+- `NamedTuple`: Contains the solver result (`sol`) and the corrected energy parameter (`Ef_corr`)
+"""
+function compute_corrected_Ef(Ef, g, Ef_corr_guess = -0.04)
+    sol = nlsolve(x -> (shift_Ef(g, x[1]) - Ef), [Ef_corr_guess])
+    Ef_corr = sol.zero[1]
+    (; sol, Ef_corr)
+end
 
 """
 Demominator of the X amplitude. Eq.(7) in arXiv: 0704.0605.
