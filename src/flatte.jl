@@ -72,7 +72,16 @@ function compute_corrected_Ef(Ef, g, Ef_corr_guess = -0.04)
 end
 
 """
-Demominator of the X amplitude. Eq.(7) in arXiv: 0704.0605.
+    denominator(model::FlatteModel, E)
+
+Calculates the denominator of the X(3872) amplitude according to Eq.(7) in arXiv: 0704.0605.
+
+# Arguments
+- `model::FlatteModel`: The Flatte model parameters
+- `E::Float64`: Energy in MeV
+
+# Returns
+- Complex denominator value of the amplitude
 """
 function denominator(model::FlatteModel, E) # E is in MeV
     @unpack Ef_MeV, g, Γ₀_MeV = model
@@ -91,15 +100,31 @@ end
 """
     AJψππ(model::FlatteModel, E)
 
-Transition amplitude of X → J/ψ π π where the decay constant in the numerator is omitted.
+Calculates the transition amplitude of X → J/ψ π π where the decay constant in the numerator is omitted.
 The functional dependence is the same as for the Dˣ⁰ D̄⁰ → Dˣ⁰ D̄⁰.
+
+# Arguments
+- `model::FlatteModel`: The Flatte model parameters
+- `E::Float64`: Energy in MeV
+
+# Returns
+- Complex amplitude value
 """
 AJψππ(model::FlatteModel, E) = 1 / denominator(model::FlatteModel, E)
 
 """
-    scattering_parameters(model::FlatteModel)
+    scattering_parameters(::Type{FlatteModel}, Ef_MeV, g)
 
-Scattering parameters of the Flatte model according to arXiv: 2108.11413
+Calculates the scattering parameters of the Flatte model according to arXiv: 2108.11413.
+Returns the inverse scattering length and effective range.
+
+# Arguments
+- `::Type{FlatteModel}`: The FlatteModel type
+- `Ef_MeV::Float64`: Effective energy parameter in MeV
+- `g::Float64`: Coupling parameter
+
+# Returns
+- `NamedTuple`: Contains inverse scattering length (`inva`) and effective range (`r`)
 """
 function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g)
     # expressions from arXiv: 2108.11413
@@ -111,14 +136,34 @@ function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g)
     return (; inva, r)
 end
 
+"""
+    scattering_parameters(model::FlatteModel)
+
+Calculates the scattering parameters (inverse scattering length and effective range)
+using the parameters from the provided FlatteModel instance.
+
+# Arguments
+- `model::FlatteModel`: The Flatte model parameters
+
+# Returns
+- `NamedTuple`: Contains inverse scattering length (`inva`) and effective range (`r`)
+"""
 scattering_parameters(model::FlatteModel) =
     scattering_parameters(typeof(model), model.Ef_MeV, model.g)
 
 """
-    pole_position(model::FlatteModel)
+    pole_position(model::FlatteModel, init = -1e3im * model.Γ₀_MeV / 10)
 
-Position of the pole singularity of the Flatte amplitude.
-The gradient decent (BFGS) is started from [0, -model.Γ₀_MeV/2] point.
+Finds the position of the pole singularity of the Flatte amplitude using numerical optimization.
+The gradient descent method (BFGS) is used to locate the complex energy where the denominator
+approaches zero.
+
+# Arguments
+- `model::FlatteModel`: The Flatte model parameters
+- `init::Complex`: Initial guess for the optimization (default: scaled by model.Γ₀_MeV)
+
+# Returns
+- `Epole::Complex`: Complex energy position of the pole in MeV
 """
 function pole_position(model::FlatteModel, init = -1e3im * model.Γ₀_MeV / 10)
     fr = optimize(x -> abs2(denominator(model, x[1] + x[2] * 1im)), collect(reim(init)), BFGS())
