@@ -8,6 +8,7 @@ using Optim
 
 include("masseswidths.jl")
 
+export ParticleData
 export FlatteModel
 export ReparametrizeFlatte
 export compute_corrected_Ef
