@@ -18,6 +18,9 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
+permissions:
+    contents: write
+
 jobs:
     quarto:
         name: Render Quarto example
@@ -55,3 +58,19 @@ jobs:
                   path: |
                       docs/example.md
                       docs/example_files/
+
+            - name: Prepare GitHub Pages site
+              if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+              run: |
+                  mkdir -p _site
+                  cp docs/example.md _site/index.md
+                  cp -r docs/example_files _site/example_files
+
+            - name: Deploy to GitHub Pages
+              if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+              uses: peaceiris/actions-gh-pages@v4
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_dir: _site
+                  publish_branch: gh-pages
+                  force_orphan: true
