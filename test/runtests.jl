@@ -38,12 +38,12 @@ end
         particle_data = default_particle_data)
 end
 
-@testset "Ef shift uses higher elastic thresholds" begin
+@testset "Ef shift matches calibration denominator" begin
     g = 0.13
     Ef_corr = -0.04
     model = FlatteModel((; Ef_MeV = 0.0, g, Γ₀_MeV = 0.0);
         particle_data = default_particle_data)
-    expected = 1e3 * real(X3872Flatte.contribution_charged(model, Ef_corr))
+    expected = 1e3 * real(denominator(model, Ef_corr))
 
     @test X3872Flatte.shift_Ef(g, Ef_corr, default_particle_data) ≈ expected
 end
