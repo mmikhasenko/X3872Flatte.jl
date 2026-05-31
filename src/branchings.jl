@@ -11,9 +11,10 @@ upperlimit(E::Number, particle_data::ParticleData) =
     e2m(E, particle_data) - particle_data.mJψ
 
 function BXρ(E::Number, particle_data::ParticleData)
-    integrand(m′) = breakup(m′, E, particle_data) * particle_data.Γρ /
-                    ((particle_data.mρ - m′)^2 + particle_data.Γρ^2 / 4)
-    value = quadgk(integrand, 2 * particle_data.mπ, upperlimit(E, particle_data))[1]
+    @unpack mπ, mρ, Γρ = particle_data
+    integrand(m′) = breakup(m′, E, particle_data) * Γρ /
+                    ((mρ - m′)^2 + Γρ^2 / 4)
+    value = quadgk(integrand, 2 * mπ, upperlimit(E, particle_data))[1]
     return value / (2π)
 end
 
