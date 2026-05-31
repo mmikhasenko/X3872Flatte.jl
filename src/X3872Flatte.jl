@@ -10,6 +10,8 @@ include("masseswidths.jl")
 
 export ParticleData
 export FlatteModel
+export AbstractChannel, ElasticChannel, InelasticChannel
+export JpsiRho, JpsiOmega, DxD, Other, threshold
 export ReparametrizeFlatte
 export compute_corrected_Ef
 export AJψππ, denominator

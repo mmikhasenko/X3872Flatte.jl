@@ -1,21 +1,116 @@
+abstract type AbstractChannel end
+abstract type ElasticChannel <: AbstractChannel end
+abstract type InelasticChannel <: AbstractChannel end
+
+struct JpsiRho <: InelasticChannel
+    mJψ::Float64
+    mπ::Float64
+    mρ::Float64
+    Γρ::Float64
+end
+
+struct JpsiOmega <: InelasticChannel
+    mJψ::Float64
+    mπ::Float64
+    mω::Float64
+    Γω::Float64
+end
+
+JpsiRho(particle_data::ParticleData) =
+    JpsiRho(particle_data.mJψ, particle_data.mπ, particle_data.mρ, particle_data.Γρ)
+JpsiOmega(particle_data::ParticleData) =
+    JpsiOmega(particle_data.mJψ, particle_data.mπ, particle_data.mω, particle_data.Γω)
+
+struct DxD <: ElasticChannel
+    mDˣ::Float64
+    mD::Float64
+    DxD(mDˣ, mD) = new(Float64(mDˣ), Float64(mD))
+end
+
+struct Other <: InelasticChannel end
+
+threshold(channel::JpsiRho) =
+    channel.mJψ + 2 * channel.mπ
+threshold(channel::JpsiOmega) =
+    channel.mJψ + 3 * channel.mπ
+threshold(channel::DxD) = channel.mDˣ + channel.mD
+threshold(::Other) = -Inf
+
+reduced_mass(channel::DxD) = channel.mD * channel.mDˣ / (channel.mD + channel.mDˣ)
+
+k(E::Complex, channel::DxD, reference_mass) =
+    1im * sqrt(-2 * reduced_mass(channel) * (E * 1e-3 - (threshold(channel) - reference_mass)))
+k(E::Real, channel::DxD, reference_mass) = k(E + 1e-7im, channel, reference_mass)
+
 """
-    FlatteModel(Ef, g, Γ₀)
+    FlatteModel((; Ef_MeV, g, Γ₀_MeV, fρ, fω); particle_data=ParticleData())
 
 parametrises the X(3872) lineshape according to Eq.(7) in arXiv: 0704.0605.
-Parameters contained in the structure are
- - Ef_MeV: parameter of the mass peak
- - g : coupling to the Dˣ⁰D⁰
- - Γ₀_MeV: contribution to the width from other inelastic channels
- - particle_data: particle masses and widths
+The model stores the elastic and inelastic denominator contributions as channels.
+When `fρ` and `fω` are supplied, the model contains five channels:
+`DxD`, `DxD`, `Other`, `JpsiRho`, and `JpsiOmega`.
+Without `fρ` and `fω`, the model contains the three channels `DxD`, `DxD`,
+and `Other`.
 """
-@with_kw struct FlatteModel
+struct FlatteModel{C<:Tuple}
     Ef_MeV::Float64
     g::Float64
     Γ₀_MeV::Float64
     fρ::Float64
     fω::Float64
     particle_data::ParticleData
+    channels::C
 end
+
+FlatteModel(; particle_data=ParticleData(), kwargs...) =
+    FlatteModel((; kwargs...); particle_data)
+
+function FlatteModel(
+    pars::NamedTuple{(:Ef_MeV, :g, :Γ₀_MeV, :fρ, :fω)};
+    particle_data=ParticleData(),
+)
+    @unpack Ef_MeV, g, Γ₀_MeV, fρ, fω = pars
+    channels = (
+        DxD(particle_data.mDˣ⁰, particle_data.mD⁰),
+        DxD(particle_data.mDˣ⁺, particle_data.mD⁺),
+        Other(),
+        JpsiRho(particle_data),
+        JpsiOmega(particle_data),
+    )
+    return FlatteModel(
+        Float64(Ef_MeV), Float64(g), Float64(Γ₀_MeV), Float64(fρ), Float64(fω),
+        particle_data, channels)
+end
+
+function FlatteModel(
+    pars::NamedTuple{(:Ef_MeV, :g, :Γ₀_MeV)};
+    particle_data=ParticleData(),
+)
+    @unpack Ef_MeV, g, Γ₀_MeV = pars
+    channels = (
+        DxD(particle_data.mDˣ⁰, particle_data.mD⁰),
+        DxD(particle_data.mDˣ⁺, particle_data.mD⁺),
+        Other(),
+    )
+    return FlatteModel(
+        Float64(Ef_MeV), Float64(g), Float64(Γ₀_MeV), 0.0, 0.0,
+        particle_data, channels)
+end
+
+neutral_threshold(model::FlatteModel) = threshold(model.channels[1])
+threshold_offset_MeV(channel::DxD, neutral::DxD) =
+    1e3 * (threshold(channel) - threshold(neutral))
+
+contribution(model::FlatteModel, ::Type{JpsiRho}, E) =
+    0.5im * model.fρ * BXρ(E, model.channels[4], neutral_threshold(model))
+contribution(model::FlatteModel, ::Type{JpsiOmega}, E) =
+    0.5im * model.fω * BXω(E, model.channels[5], neutral_threshold(model))
+contribution_neutral(model::FlatteModel, E) =
+    0.5im * model.g * k(E, model.channels[1], neutral_threshold(model))
+contribution_charged(model::FlatteModel, E) =
+    0.5im * model.g * k(E, model.channels[2], neutral_threshold(model))
+contribution(model::FlatteModel, ::Type{Other}, E) =
+    0.5im * model.Γ₀_MeV * 1e-3
 
 """
     shift_Ef(g, Ef_corr, particle_data)
@@ -31,28 +126,43 @@ Calculates the Ef value in MeV from the corrected energy parameter and coupling 
 - `Ef_MeV::Float64`: Shifted effective energy parameter in MeV
 """
 function shift_Ef(g, Ef_corr, particle_data::ParticleData)
-    _model = FlatteModel(;
-        Ef_MeV=0.0, g, Γ₀_MeV=0.0, fρ=0.0, fω=0.0, particle_data)
-    Ef_GeV = denominator(_model, Ef_corr) |> real
+    _zero = zero(Ef_corr)
+    model = FlatteModel((; Ef_MeV=_zero, g, Γ₀_MeV=_zero); particle_data)
+    charged = DxD(particle_data.mDˣ⁺, particle_data.mD⁺)
+    neutral = DxD(particle_data.mDˣ⁰, particle_data.mD⁰)
+    Ef_GeV = threshold_offset_MeV(charged, neutral) > Ef_corr ?
+             real(contribution_charged(model, Ef_corr)) :
+             _zero
     Ef_MeV = 1e3 * Ef_GeV
     return Ef_MeV
 end
 
 """
-    ReparametrizeFlatte(pars_corr)
+    ReparametrizeFlatte(pars; particle_data=ParticleData())
 
-Creates a FlatteModel instance using corrected Ef parameter instead of Ef_MeV along with the other parameters.
-
-# Arguments
-- `pars_corr::NamedTuple`: Contains `Ef_corr`, `g`, `Γ₀_MeV`, `fρ`, `fω`, and `particle_data`.
-
-# Returns
-- `FlatteModel`: Model with physical parameters
+Creates a `FlatteModel` using corrected energy `Ef_corr` instead of `Ef_MeV`.
+Dispatches on the named tuple keys the same way as [`FlatteModel`](@ref): five-channel
+parameters include `fρ` and `fω`; the three-channel case omits them.
 """
-function ReparametrizeFlatte(pars_corr)
-    @unpack Ef_corr, g, Γ₀_MeV, fρ, fω, particle_data = pars_corr
+ReparametrizeFlatte(; particle_data=ParticleData(), kwargs...) =
+    ReparametrizeFlatte((; kwargs...); particle_data)
+
+function ReparametrizeFlatte(
+    pars::NamedTuple{(:Ef_corr, :g, :Γ₀_MeV, :fρ, :fω)};
+    particle_data=ParticleData(),
+)
+    @unpack Ef_corr, g, Γ₀_MeV, fρ, fω = pars
     Ef_MeV = shift_Ef(g, Ef_corr, particle_data)
-    return FlatteModel(; Ef_MeV, g, Γ₀_MeV, fρ, fω, particle_data)
+    return FlatteModel((; Ef_MeV, g, Γ₀_MeV, fρ, fω); particle_data)
+end
+
+function ReparametrizeFlatte(
+    pars::NamedTuple{(:Ef_corr, :g, :Γ₀_MeV)};
+    particle_data=ParticleData(),
+)
+    @unpack Ef_corr, g, Γ₀_MeV = pars
+    Ef_MeV = shift_Ef(g, Ef_corr, particle_data)
+    return FlatteModel((; Ef_MeV, g, Γ₀_MeV); particle_data)
 end
 
 """
@@ -89,15 +199,13 @@ Calculates the denominator of the X(3872) amplitude according to Eq.(7) in arXiv
 - Complex denominator value of the amplitude
 """
 function denominator(model::FlatteModel, E) # E is in MeV
-    @unpack Ef_MeV, g, Γ₀_MeV = model
-    @unpack fρ, fω = model
-    particle_data = model.particle_data
-    #
-    Bρ = BXρ(E, particle_data)
-    Bω = BXω(E, particle_data)
-    # 
-    D = (E - Ef_MeV) * 1e-3 + 0.5im * (g * k1(E, particle_data) + g * k2(E, particle_data)) +
-        0.5im * (Γ₀_MeV * 1e-3 + fρ * Bρ + fω * Bω)
+    D = (E - model.Ef_MeV) * 1e-3 +
+        contribution_neutral(model, E) +
+        contribution_charged(model, E) +
+        contribution(model, Other, E)
+    if length(model.channels) == 5
+        D += contribution(model, JpsiRho, E) + contribution(model, JpsiOmega, E)
+    end
     return D
 end
 
