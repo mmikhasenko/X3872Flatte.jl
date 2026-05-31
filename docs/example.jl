@@ -6,13 +6,20 @@ default_model = let
     @unpack Ef_MeV, g, Γ₀_MeV, fρ, fω = X3872Flatte.LHCb_point8
     FlatteModel(;
         Ef_MeV,     # MeV, binding energy
-        g,      # Coupling to D*0D0
+        g,          # Coupling to D*0D0
         Γ₀_MeV,     # MeV, decay width to other channels
-        fρ,     # Coupling to J/ψρ
-        fω,      # Coupling to J/ψω
+        fρ,         # Coupling to J/ψρ
+        fω,         # Coupling to J/ψω
         particle_data = ParticleData(),
     )
 end
+
+# Decay channels are stored on the model as typed channel objects
+D⁰, D⁺, _, ρ, ω = default_model.channels
+println("Neutral D*D threshold: $(threshold(D⁰)) GeV")
+println("Charged D*D threshold: $(threshold(D⁺)) GeV")
+println("J/ψρ threshold: $(threshold(ρ)) GeV")
+println("J/ψω threshold: $(threshold(ω)) GeV")
 
 # Find pole position
 pole = pole_position(default_model)
@@ -30,11 +37,10 @@ plot(energies, abs2.(amplitudes),
     title = "χc1(3872) Amplitude",
     fillalpha = 0.2, fill = 0)
 
-
 # Naive calculation of the branching ratios
-br_rho = dRρ(default_model)
-br_omega = dRω(default_model)
-br_dd = dRDˣ⁰D⁰(default_model)
+br_rho = X3872Flatte.dRρ(default_model)
+br_omega = X3872Flatte.dRω(default_model)
+br_dd = X3872Flatte.dRDˣ⁰D⁰(default_model)
 println("Branching ratio to J/ψρ: $br_rho")
 println("Branching ratio to J/ψω: $br_omega")
 println("Branching ratio to D*0D0: $br_dd")
