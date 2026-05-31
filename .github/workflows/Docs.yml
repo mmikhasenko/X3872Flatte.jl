@@ -1,0 +1,57 @@
+name: Docs
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "docs/**"
+            - "src/**"
+            - "Project.toml"
+    pull_request:
+        paths:
+            - "docs/**"
+            - "src/**"
+            - "Project.toml"
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+    quarto:
+        name: Render Quarto example
+        runs-on: ubuntu-latest
+        steps:
+            - name: Clone
+              uses: actions/checkout@v4
+
+            - name: Setup Julia
+              uses: julia-actions/setup-julia@v2
+              with:
+                  version: "1"
+
+            - name: Use Julia cache
+              uses: julia-actions/cache@v2
+
+            - name: Setup Quarto
+              uses: quarto-dev/quarto-actions/setup@v2
+
+            - name: Install docs environment
+              run: |
+                  julia --project=docs -e '
+                      using Pkg
+                      Pkg.develop(PackageSpec(path=pwd()))
+                      Pkg.instantiate()
+                  '
+
+            - name: Render example
+              run: quarto render docs/example.qmd
+
+            - name: Upload rendered docs
+              uses: actions/upload-artifact@v4
+              with:
+                  name: docs-example
+                  path: |
+                      docs/example.md
+                      docs/example_files/

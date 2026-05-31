@@ -1,0 +1,13 @@
+project:
+  type: default
+  output-dir: .
+
+engines: [julia]
+
+format:
+  gfm:
+    wrap: none
+
+execute:
+  echo: true
+  warning: false
