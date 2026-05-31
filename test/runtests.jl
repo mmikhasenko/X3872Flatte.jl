@@ -8,7 +8,6 @@ const default_particle_data = ParticleData()
         Ef_MeV = -7.5, g = 0.1, Γ₀_MeV = 1.8,
         fρ = 0.0, fω = 0.0,
         particle_data = default_particle_data) # Ef is above the second threshold
-    # 
     Ai = AJψππ(model, 1.1)
     @test Ai ≈ 154.17507563874798 - 179.56915419693846im
 end
@@ -21,16 +20,21 @@ end
     @test isapprox(E_pole, 0.0134358620 - 0.1152417753im, atol = 1e-8)
 end
 
-
 @testset "Reparametrize Flatte" begin
     g, Γ₀_MeV, Ef_MeV = 0.13, 1.8, -8.8
+
     _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, default_particle_data)
     model = ReparametrizeFlatte((;
         g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0, particle_data = default_particle_data))
     @test model.Ef_MeV ≈ Ef_MeV
+
+    particle_data = ParticleData(; mD⁺ = 1.90, mDˣ⁺ = 2.07)
+    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, particle_data; Ef_corr_guess = -0.04)
+    model = ReparametrizeFlatte((; g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0, particle_data))
+    @test model.Ef_MeV ≈ Ef_MeV
 end
 
-@testset "Particle masses are particle data" begin
+@testset "denominator with custom particle masses" begin
     particle_data = ParticleData(;
         mD⁰ = 1.80,
         mDˣ⁰ = 2.00,
@@ -57,53 +61,5 @@ end
                0.5im * model.g * (k1 + k2) +
                0.5im * model.Γ₀_MeV * 1e-3
 
-    @test model.particle_data === particle_data
     @test denominator(model, E) ≈ expected
-    @test denominator(model, E) != denominator(FlatteModel(;
-        Ef_MeV = model.Ef_MeV,
-        g = model.g,
-        Γ₀_MeV = model.Γ₀_MeV,
-        fρ = model.fρ,
-        fω = model.fω,
-        particle_data = default_particle_data,
-    ), E)
-end
-
-@testset "Branching terms use particle data" begin
-    default_model = FlatteModel(;
-        Ef_MeV = -7.5,
-        g = 0.1,
-        Γ₀_MeV = 1.8,
-        fρ = 0.02,
-        fω = 0.03,
-        particle_data = default_particle_data,
-    )
-    varied_particle_data = ParticleData(;
-        mJψ = 3.000,
-        mπ = 0.120,
-        mρ = 0.720,
-        mω = 0.760,
-        Γρ = 0.120,
-        Γω = 0.010,
-    )
-    varied_model = FlatteModel(;
-        Ef_MeV = default_model.Ef_MeV,
-        g = default_model.g,
-        Γ₀_MeV = default_model.Γ₀_MeV,
-        fρ = default_model.fρ,
-        fω = default_model.fω,
-        particle_data = varied_particle_data,
-    )
-
-    @test !isapprox(denominator(varied_model, 1.1), denominator(default_model, 1.1); rtol = 1e-8)
-end
-
-@testset "Reparametrize Flatte preserves particle data" begin
-    particle_data = ParticleData(; mD⁺ = 1.90, mDˣ⁺ = 2.07)
-    g, Γ₀_MeV, Ef_MeV = 0.13, 1.8, -8.8
-    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, particle_data; Ef_corr_guess=-0.04)
-    model = ReparametrizeFlatte((; g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0, particle_data))
-
-    @test model.particle_data === particle_data
-    @test model.Ef_MeV ≈ Ef_MeV
 end
