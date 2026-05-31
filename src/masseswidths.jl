@@ -1,37 +1,47 @@
-# constants come from the PDG@2020
-# checked
-const mJψ = 3096.90e-3 # GeV 
-const mχc₁ = 3871.65e-3 #GeV mass from J/ψ mode
-const mD⁰ = 1864.83e-3  # GeV
-const mD⁺ = 1869.58e-3  # GeV
+"""
+    ParticleData(; ...)
 
-#  light mesons
-const mπ = 139.57e-3; # to be checked and moved to masses.jl
-const mρ = 775.49e-3 # GeV Neutral only mass
-const mω = 782.65e-3 #Gev
-const Γρ = 149.1e-3 # GeV Neutral only width
-const Γω = 8.68e-3 #GeV
+Particle masses and widths used by the X(3872) Flatte model, in GeV.
+Default values come from the PDG@2020.
+"""
+@with_kw struct ParticleData
+    mJψ::Float64 = 3096.90e-3 # GeV
+    mχc₁::Float64 = 3871.65e-3 # GeV mass from J/ψ mode
+    mD⁰::Float64 = 1864.83e-3 # GeV
+    mD⁺::Float64 = 1869.58e-3 # GeV
+    mπ::Float64 = 139.57e-3 # GeV
+    mρ::Float64 = 775.49e-3 # GeV Neutral only mass
+    mω::Float64 = 782.65e-3 # GeV
+    Γρ::Float64 = 149.1e-3 # GeV Neutral only width
+    Γω::Float64 = 8.68e-3 # GeV
+    mDˣ⁺::Float64 = 2010.26e-3 # GeV
+    mDˣ⁰::Float64 = 2006.85e-3 # GeV
+    ΓDˣ⁺::Float64 = 83.4e-6 # GeV
+    ΓDˣ⁰::Float64 = 55.2e-6 # GeV
+end
 
-const mDˣ⁺ = 2010.26e-3  # GeV 
-const mDˣ⁰ = 2006.85e-3  # GeV
+m2e(m, particle_data::ParticleData) =
+    (m - particle_data.mDˣ⁰ - particle_data.mD⁰) * 1e3
 
-m2e(m) = (m - mDˣ⁰ - mD⁰) * 1e3
-e2m(E) = E * 1e-3 + mDˣ⁰ + mD⁰
+e2m(E, particle_data::ParticleData) =
+    E * 1e-3 + particle_data.mDˣ⁰ + particle_data.mD⁰
 
-const ΓDˣ⁺ = 83.4e-6
-const ΓDˣ⁰ = 55.2e-6
-
-# 
 const fm_times_GeV = 197.3269804e-3
 
+reduced_mass_neutral(particle_data::ParticleData) =
+    particle_data.mD⁰ * particle_data.mDˣ⁰ / (particle_data.mD⁰ + particle_data.mDˣ⁰)
 
-const μ = mD⁰ * mDˣ⁰ / (mD⁰ + mDˣ⁰)  # GeV
-const μ⁺ = mD⁺ * mDˣ⁺ / (mD⁺ + mDˣ⁺)  # GeV
-const δ⁺ = (mD⁺ + mDˣ⁺) - (mDˣ⁰ + mD⁰) # GeV
+reduced_mass_charged(particle_data::ParticleData) =
+    particle_data.mD⁺ * particle_data.mDˣ⁺ / (particle_data.mD⁺ + particle_data.mDˣ⁺)
 
-k1(E::Complex) = 1im * sqrt(-2μ * (E * 1e-3))
-k2(E::Complex) = 1im * sqrt(-2μ⁺ * (E * 1e-3 - δ⁺))
+charged_threshold_offset(particle_data::ParticleData) =
+    (particle_data.mD⁺ + particle_data.mDˣ⁺) - (particle_data.mDˣ⁰ + particle_data.mD⁰)
 
-k1(E::Real) = k1(E + 1e-7im)
-k2(E::Real) = k2(E + 1e-7im)
+k1(E::Complex, particle_data::ParticleData) =
+    1im * sqrt(-2 * reduced_mass_neutral(particle_data) * (E * 1e-3))
 
+k2(E::Complex, particle_data::ParticleData) =
+    1im * sqrt(-2 * reduced_mass_charged(particle_data) * (E * 1e-3 - charged_threshold_offset(particle_data)))
+
+k1(E::Real, particle_data::ParticleData) = k1(E + 1e-7im, particle_data)
+k2(E::Real, particle_data::ParticleData) = k2(E + 1e-7im, particle_data)

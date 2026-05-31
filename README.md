@@ -42,6 +42,7 @@ default_model = let
         Γ₀_MeV,     # MeV, decay width to other channels
         fρ,     # Coupling to J/ψρ
         fω,      # Coupling to J/ψω
+        particle_data = ParticleData(),
     )
 end
 
