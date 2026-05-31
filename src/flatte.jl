@@ -115,7 +115,14 @@ contribution(model::FlatteModel, ::Type{Other}, E) =
 """
     shift_Ef(g, Ef_corr, particle_data)
 
-Calculates the Ef value in MeV from the corrected energy parameter and coupling by adding dispersive contribution from the charged DxD channel to it. 
+Maps reparametrized energy `Ef_corr` to physical `Ef_MeV` via the calibration denominator
+(`Ef = 0`, `Γ₀ = 0`, elastic DˣD channels only), evaluated at `E = Ef_corr`:
+
+```math
+E_{f,\\mathrm{MeV}} = E_{f,\\mathrm{corr}} + 10^3\\,\\mathrm{Re}\\big[\\Sigma(E_{f,\\mathrm{corr}})\\big],
+```
+
+with ``\\Sigma`` the sum of neutral and charged DˣD loop contributions.
 
 # Arguments
 - `g`: Coupling parameter to the Dˣ⁰D⁰ channel
@@ -123,18 +130,11 @@ Calculates the Ef value in MeV from the corrected energy parameter and coupling 
 - `particle_data::ParticleData`: Particle masses and widths
 
 # Returns
-- `Ef_MeV::Float64`: Shifted effective energy parameter in MeV
+- `Ef_MeV::Float64`: Physical effective energy parameter in MeV
 """
 function shift_Ef(g, Ef_corr, particle_data::ParticleData)
-    _zero = zero(Ef_corr)
-    model = FlatteModel((; Ef_MeV=_zero, g, Γ₀_MeV=_zero); particle_data)
-    charged = DxD(particle_data.mDˣ⁺, particle_data.mD⁺)
-    neutral = DxD(particle_data.mDˣ⁰, particle_data.mD⁰)
-    Ef_GeV = threshold_offset_MeV(charged, neutral) > Ef_corr ?
-             real(contribution_charged(model, Ef_corr)) :
-             _zero
-    Ef_MeV = 1e3 * Ef_GeV
-    return Ef_MeV
+    model = FlatteModel((; Ef_MeV=0.0, g, Γ₀_MeV=0.0); particle_data)
+    return 1e3 * real(denominator(model, Ef_corr))
 end
 
 """
