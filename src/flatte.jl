@@ -29,9 +29,9 @@ Calculates the Ef value in MeV from the corrected energy parameter and coupling 
 # Returns
 - `Ef_MeV::Float64`: Shifted effective energy parameter in MeV
 """
-function shift_Ef(g, Ef_corr, particle_data::ParticleData = ParticleData())
+function shift_Ef(g, Ef_corr, particle_data::ParticleData=ParticleData())
     _model = FlatteModel(;
-        Ef_MeV = 0.0, g, Γ₀_MeV = 0.0, fρ = 0.0, fω = 0.0, particle_data)
+        Ef_MeV=0.0, g, Γ₀_MeV=0.0, fρ=0.0, fω=0.0, particle_data)
     Ef_GeV = denominator(_model, Ef_corr) |> real
     Ef_MeV = 1e3 * Ef_GeV
     return Ef_MeV
@@ -51,7 +51,7 @@ Creates a FlatteModel instance using corrected Ef parameter instead of Ef_MeV al
 """
 function ReparametrizeFlatte(pars_corr)
     @unpack Ef_corr, g, Γ₀_MeV, fρ, fω = pars_corr
-    particle_data = haskey(pars_corr, :particle_data) ? pars_corr.particle_data : ParticleData()
+    particle_data = get(pars_corr, :particle_data, ParticleData())
     Ef_MeV = shift_Ef(g, Ef_corr, particle_data)
     return FlatteModel(; Ef_MeV, g, Γ₀_MeV, fρ, fω, particle_data)
 end
@@ -71,7 +71,7 @@ between physical Ef and corrected Ef_corr parameters.
 # Returns
 - `NamedTuple`: Contains the solver result (`sol`) and the corrected energy parameter (`Ef_corr`)
 """
-function compute_corrected_Ef(Ef, g, Ef_corr_guess = -0.04, particle_data::ParticleData = ParticleData())
+function compute_corrected_Ef(Ef, g, Ef_corr_guess=-0.04, particle_data::ParticleData=ParticleData())
     sol = nlsolve(x -> (shift_Ef(g, x[1], particle_data) - Ef), [Ef_corr_guess])
     Ef_corr = sol.zero[1]
     (; sol, Ef_corr)
@@ -133,7 +133,7 @@ Returns the inverse scattering length and effective range.
 # Returns
 - `NamedTuple`: Contains inverse scattering length (`inva`) and effective range (`r`)
 """
-function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data::ParticleData = ParticleData())
+function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data::ParticleData=ParticleData())
     # expressions from arXiv: 2108.11413
     μ = reduced_mass_neutral(particle_data)
     μ⁺ = reduced_mass_charged(particle_data)
@@ -175,7 +175,7 @@ approaches zero.
 # Returns
 - `Epole::Complex`: Complex energy position of the pole in MeV
 """
-function pole_position(model::FlatteModel, init = -1e3im * model.Γ₀_MeV / 10)
+function pole_position(model::FlatteModel, init=-1e3im * model.Γ₀_MeV / 10)
     fr = optimize(x -> abs2(denominator(model, x[1] + x[2] * 1im)), collect(reim(init)), BFGS())
     minimum_reached = (fr.minimum < 1e-8)
     !(minimum_reached) && error("Pole is not found: fr.minimum = $(fr.minimum)")
