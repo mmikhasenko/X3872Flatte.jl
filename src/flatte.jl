@@ -14,22 +14,23 @@ Parameters contained in the structure are
     Γ₀_MeV::Float64
     fρ::Float64
     fω::Float64
-    particle_data::ParticleData = ParticleData()
+    particle_data::ParticleData
 end
 
 """
-    shift_Ef(g, Ef_corr, particle_data = ParticleData())
+    shift_Ef(g, Ef_corr, particle_data)
 
 Calculates the Ef value in MeV from the corrected energy parameter and coupling by adding dispersive contribution from the charged DxD channel to it. 
 
 # Arguments
 - `g`: Coupling parameter to the Dˣ⁰D⁰ channel
 - `Ef_corr`: Energy parameter in MeV
+- `particle_data::ParticleData`: Particle masses and widths
 
 # Returns
 - `Ef_MeV::Float64`: Shifted effective energy parameter in MeV
 """
-function shift_Ef(g, Ef_corr, particle_data::ParticleData=ParticleData())
+function shift_Ef(g, Ef_corr, particle_data::ParticleData)
     _model = FlatteModel(;
         Ef_MeV=0.0, g, Γ₀_MeV=0.0, fρ=0.0, fω=0.0, particle_data)
     Ef_GeV = denominator(_model, Ef_corr) |> real
@@ -43,21 +44,19 @@ end
 Creates a FlatteModel instance using corrected Ef parameter instead of Ef_MeV along with the other parameters.
 
 # Arguments
-- `pars_corr::NamedTuple`: Contains `Ef_corr`, `g`, `Γ₀_MeV`, `fρ`, and `fω` parameters.
-  An optional `particle_data::ParticleData` field sets the particle masses and widths.
+- `pars_corr::NamedTuple`: Contains `Ef_corr`, `g`, `Γ₀_MeV`, `fρ`, `fω`, and `particle_data`.
 
 # Returns
 - `FlatteModel`: Model with physical parameters
 """
 function ReparametrizeFlatte(pars_corr)
-    @unpack Ef_corr, g, Γ₀_MeV, fρ, fω = pars_corr
-    particle_data = get(pars_corr, :particle_data, ParticleData())
+    @unpack Ef_corr, g, Γ₀_MeV, fρ, fω, particle_data = pars_corr
     Ef_MeV = shift_Ef(g, Ef_corr, particle_data)
     return FlatteModel(; Ef_MeV, g, Γ₀_MeV, fρ, fω, particle_data)
 end
 
 """
-    compute_corrected_Ef(Ef, g, Ef_corr_guess = -0.04, particle_data = ParticleData())
+    compute_corrected_Ef(Ef, g, particle_data; Ef_corr_guess = -0.04)
 
 Computes the corrected energy parameter by numerically solving the inverse relationship
 between physical Ef and corrected Ef_corr parameters.
@@ -65,13 +64,13 @@ between physical Ef and corrected Ef_corr parameters.
 # Arguments
 - `Ef::Float64`: Target physical energy parameter in MeV
 - `g::Float64`: Coupling parameter to the Dˣ⁰D⁰ channel
-- `Ef_corr_guess::Float64`: Initial guess for the numerical solver (default: -0.04)
 - `particle_data::ParticleData`: Particle masses and widths used in the correction
+- `Ef_corr_guess::Float64`: Initial guess for the numerical solver (default: -0.04)
 
 # Returns
 - `NamedTuple`: Contains the solver result (`sol`) and the corrected energy parameter (`Ef_corr`)
 """
-function compute_corrected_Ef(Ef, g, Ef_corr_guess=-0.04, particle_data::ParticleData=ParticleData())
+function compute_corrected_Ef(Ef, g, particle_data::ParticleData; Ef_corr_guess=-0.04)
     sol = nlsolve(x -> (shift_Ef(g, x[1], particle_data) - Ef), [Ef_corr_guess])
     Ef_corr = sol.zero[1]
     (; sol, Ef_corr)
@@ -120,7 +119,7 @@ The functional dependence is the same as for the Dˣ⁰ D̄⁰ → Dˣ⁰ D̄⁰
 AJψππ(model::FlatteModel, E) = 1 / denominator(model::FlatteModel, E)
 
 """
-    scattering_parameters(::Type{FlatteModel}, Ef_MeV, g)
+    scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data)
 
 Calculates the scattering parameters of the Flatte model according to arXiv: 2108.11413.
 Returns the inverse scattering length and effective range.
@@ -129,11 +128,12 @@ Returns the inverse scattering length and effective range.
 - `::Type{FlatteModel}`: The FlatteModel type
 - `Ef_MeV::Float64`: Effective energy parameter in MeV
 - `g::Float64`: Coupling parameter
+- `particle_data::ParticleData`: Particle masses and widths
 
 # Returns
 - `NamedTuple`: Contains inverse scattering length (`inva`) and effective range (`r`)
 """
-function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data::ParticleData=ParticleData())
+function scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data::ParticleData)
     # expressions from arXiv: 2108.11413
     μ = reduced_mass_neutral(particle_data)
     μ⁺ = reduced_mass_charged(particle_data)

@@ -1,17 +1,22 @@
 using X3872Flatte
 using Test
 
+const default_particle_data = ParticleData()
+
 @testset "Testing amplitude" begin
-    model = FlatteModel(
+    model = FlatteModel(;
         Ef_MeV = -7.5, g = 0.1, Γ₀_MeV = 1.8,
-        fρ = 0.0, fω = 0.0) # Ef is above the second threshold
+        fρ = 0.0, fω = 0.0,
+        particle_data = default_particle_data) # Ef is above the second threshold
     # 
     Ai = AJψππ(model, 1.1)
     @test Ai ≈ 154.17507563874798 - 179.56915419693846im
 end
 
 @testset "Pole position" begin
-    model = FlatteModel(Ef_MeV = -8.8, g = 0.13, Γ₀_MeV = 1.8, fρ = 0.0, fω = 0.0)
+    model = FlatteModel(;
+        Ef_MeV = -8.8, g = 0.13, Γ₀_MeV = 1.8, fρ = 0.0, fω = 0.0,
+        particle_data = default_particle_data)
     E_pole = pole_position(model)
     @test isapprox(E_pole, 0.0134358620 - 0.1152417753im, atol = 1e-8)
 end
@@ -19,8 +24,9 @@ end
 
 @testset "Reparametrize Flatte" begin
     g, Γ₀_MeV, Ef_MeV = 0.13, 1.8, -8.8
-    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g)
-    model = ReparametrizeFlatte((; g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0))
+    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, default_particle_data)
+    model = ReparametrizeFlatte((;
+        g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0, particle_data = default_particle_data))
     @test model.Ef_MeV ≈ Ef_MeV
 end
 
@@ -59,6 +65,7 @@ end
         Γ₀_MeV = model.Γ₀_MeV,
         fρ = model.fρ,
         fω = model.fω,
+        particle_data = default_particle_data,
     ), E)
 end
 
@@ -69,6 +76,7 @@ end
         Γ₀_MeV = 1.8,
         fρ = 0.02,
         fω = 0.03,
+        particle_data = default_particle_data,
     )
     varied_particle_data = ParticleData(;
         mJψ = 3.000,
@@ -93,7 +101,7 @@ end
 @testset "Reparametrize Flatte preserves particle data" begin
     particle_data = ParticleData(; mD⁺ = 1.90, mDˣ⁺ = 2.07)
     g, Γ₀_MeV, Ef_MeV = 0.13, 1.8, -8.8
-    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, -0.04, particle_data)
+    _, Ef_corr = compute_corrected_Ef(Ef_MeV, g, particle_data; Ef_corr_guess=-0.04)
     model = ReparametrizeFlatte((; g, Γ₀_MeV, Ef_corr, fρ = 0, fω = 0, particle_data))
 
     @test model.particle_data === particle_data
