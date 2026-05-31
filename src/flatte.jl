@@ -115,7 +115,7 @@ contribution(model::FlatteModel, ::Type{Other}, E) =
 """
     shift_Ef(g, Ef_corr, particle_data)
 
-Maps reparametrized energy `Ef_corr` to physical `Ef_MeV` via the calibration denominator
+Maps reparametrized energy `Ef_corr` to `Ef_MeV` via the calibration denominator
 (`Ef = 0`, `Γ₀ = 0`, elastic DˣD channels only), evaluated at `E = Ef_corr`:
 
 ```math
@@ -130,7 +130,7 @@ with ``\\Sigma`` the sum of neutral and charged DˣD loop contributions.
 - `particle_data::ParticleData`: Particle masses and widths
 
 # Returns
-- `Ef_MeV::Float64`: Physical effective energy parameter in MeV
+- `Ef_MeV::Float64`: Effective energy parameter in MeV
 """
 function shift_Ef(g, Ef_corr, particle_data::ParticleData)
     model = FlatteModel((; Ef_MeV=0.0, g, Γ₀_MeV=0.0); particle_data)
