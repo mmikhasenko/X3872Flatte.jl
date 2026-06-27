@@ -5,7 +5,7 @@ project:
 engines: [julia]
 
 format:
-  gfm:
+  html:
     wrap: none
 
 execute:

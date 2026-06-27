@@ -1,6 +1,6 @@
 ---
 title: "χc1(3872) Flatte model example"
-output-file: index.md
+output-file: index.html
 engine: julia
 ---
 

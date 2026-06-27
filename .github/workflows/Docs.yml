@@ -34,7 +34,7 @@ jobs:
               with:
                   name: docs-example
                   path: |
-                      docs/index.md
+                      docs/index.html
                       docs/example_files/
 
             - name: Deploy to GitHub Pages

@@ -40,4 +40,4 @@ jobs:
               uses: lycheeverse/lychee-action@v2
               with:
                   fail: true
-                  exclude: ^https://mmikhasenko\.github\.io/X3872Flatte\.jl/?$
+                  args: --exclude ^https://mmikhasenko\.github\.io/X3872Flatte\.jl/?$ --
