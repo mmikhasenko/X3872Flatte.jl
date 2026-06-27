@@ -1164,7 +1164,7 @@ version = "1.24.0+0"
 
 [[deps.X3872Flatte]]
 deps = ["NLsolve", "Optim", "Parameters", "QuadGK", "Test"]
-path = "/Users/mikhailmikhasenko/Documents/X3872.CAT/X3872Flatte.jl"
+path = ".."
 uuid = "1d4d2ca6-8d88-4659-b015-94c7f1db6ef2"
 version = "0.4.1"
 
