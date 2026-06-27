@@ -1,13 +1,13 @@
 # X3872Flatte.jl
 
-A Julia package for modeling the $\chi_{c1}(3872)$ state (formerly known as X(3872)) using a non-relativistic Flatte parameterization.
+A Julia package for modeling the χc1(3872) state (formerly known as X(3872)) using a non-relativistic Flatte parameterization.
 
 ## Description
 
-This package implements a Flatte model for the $\chi_{c1}(3872)$ exotic hadron state, based on the parametrization described in [arXiv:0704.0605](https://arxiv.org/abs/0704.0605).
+This package implements a Flatte model for the χc1(3872) exotic hadron state, based on the parametrization described in [arXiv:0704.0605](https://arxiv.org/abs/0704.0605).
 It's a non-relativistic Breit-Wigner function that parametrizes the energy-dependent width by a sum of
-- the $D^{*0}D^0$, $D^{*+}D^-$ channels with equal coupling strength, 
-- the $j/ψ ρ$ and $j/ψ ω$ channels with $2π$ and $3π$ resonances, and
+- the D*0 D0 and D*+ D- channels with equal coupling strength,
+- the J/ψ ρ and J/ψ ω channels with 2π and 3π resonances, and
 - a constant inelastic contribution accumulating all other channels.
 
 ## Installation
@@ -22,58 +22,37 @@ Pkg.add("https://github.com/mmikhasenko/X3872Flatte.jl")
 Or from the Julia REPL:
 
 ```julia
-] add https://github.com/mikhailmikhasenko/X3872Flatte.jl
+] add https://github.com/mmikhasenko/X3872Flatte.jl
 ```
 
 ## Usage
 
-Here's a basic example of how to use the package:
+A minimal model can be built from the published LHCb point and evaluated directly
+as a function of energy relative to the neutral D*0 D0 threshold:
 
 ```julia
 using X3872Flatte
 using Parameters
-using Plots
 
 default_model = let
     @unpack Ef_MeV, g, Γ₀_MeV, fρ, fω = X3872Flatte.LHCb_point8
     FlatteModel(;
         Ef_MeV,     # MeV, binding energy
-        g,      # Coupling to D*0D0
+        g,          # Coupling to D*0D0
         Γ₀_MeV,     # MeV, decay width to other channels
-        fρ,     # Coupling to J/ψρ
-        fω,      # Coupling to J/ψω
+        fρ,         # Coupling to J/ψρ
+        fω,         # Coupling to J/ψω
         particle_data = ParticleData(),
     )
 end
 
-# Calculate amplitude over energy range
-energies = range(-2, 2, length = 500) # MeV
-amplitudes = [AJψππ(default_model, E) for E in energies]
-
-theme(:boxed)
-# Plot the amplitude
-plot(energies, abs2.(amplitudes),
-    xlabel = "m(J/ψπ⁺π⁻)-m(thr.) [MeV]",
-    ylabel = "|A|²",
-    title = "χc1(3872) Amplitude",
-    fillalpha = 0.2, fill = 0)
-```
-
-Naive calculation of the branching ratios is done as follows:
-
-```julia
-br_rho = dRρ(default_model)    # gives 0.49
-br_omega = dRω(default_model)  # gives 0.45
-br_dd = dRDˣ⁰D⁰(default_model) # gives 2.16
-```
-
-The pole position in the complex E plane is calculated using the `pole_position` function:
-
-```julia
+intensity_at_threshold = abs2(AJψππ(default_model, 0.0))
 pole_E_MeV = pole_position(default_model)
-pole_mass = real(pole_E_MeV)    # gives -0.02 (MeV)
-pole_width = 2imag(-pole_E_MeV) # gives  0.05 (MeV)
+rho_fraction = dRρ(default_model)
 ```
+
+The rendered tutorial is available at
+[mmikhasenko.github.io/X3872Flatte.jl](https://mmikhasenko.github.io/X3872Flatte.jl/).
 
 ## References
 
@@ -85,4 +64,3 @@ The model is
 ## License
 
 MIT
-

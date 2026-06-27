@@ -1,4 +1,4 @@
 /.quarto/
+/_site/
 **/*.quarto_ipynb
 /example.md
-/example_files/
