@@ -1,0 +1,101 @@
+---
+title: "χc1(3872) Flatte model example"
+output-file: index.html
+engine: julia
+---
+
+This tutorial builds the default LHCb point-8 model, inspects its decay channels,
+draws a basic lineshape, computes the pole position, and evaluates naive branching ratios.
+
+```{julia}
+#| label: setup
+#| echo: false
+#| output: false
+ENV["GKSwstype"] = "100"  # headless backend for CI
+
+using X3872Flatte
+using Parameters
+using Plots
+
+default_model = let
+    @unpack Ef_MeV, g, Γ₀_MeV, fρ, fω = X3872Flatte.LHCb_point8
+    FlatteModel(;
+        Ef_MeV,     # MeV, binding energy
+        g,          # Coupling to D*0D0
+        Γ₀_MeV,     # MeV, decay width to other channels
+        fρ,         # Coupling to J/ψρ
+        fω,         # Coupling to J/ψω
+        particle_data = ParticleData(),
+    )
+end
+```
+
+## Channel thresholds
+
+Decay channels are stored on the model as typed channel objects.
+
+```{julia}
+#| label: thresholds
+D⁰, D⁺, other, ρ, ω = default_model.channels
+(
+    neutral_DxD = threshold(D⁰),
+    charged_DxD = threshold(D⁺),
+    other = threshold(other),
+    Jpsi_rho = threshold(ρ),
+    Jpsi_omega = threshold(ω),
+)
+```
+
+## Basic shape
+
+The Flatte amplitude is evaluated as a function of the energy relative to the neutral
+`D*0 D0` threshold. A minimal shape calculation needs only a model, an energy grid,
+and `AJψππ`.
+
+```{julia}
+#| label: basic-shape-data
+energies = range(-2, 2, length = 500) # MeV
+intensity = [abs2(AJψππ(default_model, E)) for E in energies]
+
+(
+    peak_energy = energies[argmax(intensity)],
+    peak_intensity = maximum(intensity),
+)
+```
+
+## Pole position
+
+```{julia}
+#| label: pole
+pole = pole_position(default_model)
+(real = real(pole), width = abs(imag(pole)))
+```
+
+## Amplitude
+
+```{julia}
+#| label: amplitude-plot
+#| fig-cap: "Squared amplitude |A|² for the χc1(3872) lineshape."
+#| fig-width: 6
+#| fig-height: 4
+theme(:boxed)
+plot(energies, intensity,
+    xlabel = "m(J/ψπ⁺π⁻)-m(thr.) [MeV]",
+    ylabel = "|A|²",
+    title = "χc1(3872) Amplitude",
+    fillalpha = 0.2, fill = 0,
+    legend = false)
+```
+
+## Branching ratios
+
+Naive partial widths integrated against the lineshape:
+
+```{julia}
+#| label: branching-ratios
+(
+    Jpsi_rho = X3872Flatte.dRρ(default_model),
+    Jpsi_omega = X3872Flatte.dRω(default_model),
+    DxD = X3872Flatte.dRDˣ⁰D⁰(default_model),
+)
+```
