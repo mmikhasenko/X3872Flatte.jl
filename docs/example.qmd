@@ -1,11 +1,11 @@
 ---
 title: "χc1(3872) Flatte model example"
-format: gfm
+output-file: index.html
 engine: julia
 ---
 
-This example builds the default LHCb point-8 model, inspects its decay channels,
-computes the pole position, plots the amplitude, and evaluates naive branching ratios.
+This tutorial builds the default LHCb point-8 model, inspects its decay channels,
+draws a basic lineshape, computes the pole position, and evaluates naive branching ratios.
 
 ```{julia}
 #| label: setup
@@ -36,12 +36,30 @@ Decay channels are stored on the model as typed channel objects.
 
 ```{julia}
 #| label: thresholds
-D⁰, D⁺, _, ρ, ω = default_model.channels
+D⁰, D⁺, other, ρ, ω = default_model.channels
 (
     neutral_DxD = threshold(D⁰),
     charged_DxD = threshold(D⁺),
+    other = threshold(other),
     Jpsi_rho = threshold(ρ),
     Jpsi_omega = threshold(ω),
+)
+```
+
+## Basic shape
+
+The Flatte amplitude is evaluated as a function of the energy relative to the neutral
+`D*0 D0` threshold. A minimal shape calculation needs only a model, an energy grid,
+and `AJψππ`.
+
+```{julia}
+#| label: basic-shape-data
+energies = range(-2, 2, length = 500) # MeV
+intensity = [abs2(AJψππ(default_model, E)) for E in energies]
+
+(
+    peak_energy = energies[argmax(intensity)],
+    peak_intensity = maximum(intensity),
 )
 ```
 
@@ -60,11 +78,8 @@ pole = pole_position(default_model)
 #| fig-cap: "Squared amplitude |A|² for the χc1(3872) lineshape."
 #| fig-width: 6
 #| fig-height: 4
-energies = range(-2, 2, length = 500) # MeV
-amplitudes = [AJψππ(default_model, E) for E in energies]
-
 theme(:boxed)
-plot(energies, abs2.(amplitudes),
+plot(energies, intensity,
     xlabel = "m(J/ψπ⁺π⁻)-m(thr.) [MeV]",
     ylabel = "|A|²",
     title = "χc1(3872) Amplitude",

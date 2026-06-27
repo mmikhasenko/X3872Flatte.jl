@@ -22,55 +22,26 @@ permissions:
     contents: write
 
 jobs:
-    quarto:
-        name: Render Quarto example
+    deploy:
+        name: Deploy committed docs
         runs-on: ubuntu-latest
         steps:
             - name: Clone
               uses: actions/checkout@v4
 
-            - name: Setup Julia
-              uses: julia-actions/setup-julia@v2
-              with:
-                  version: "1"
-
-            - name: Use Julia cache
-              uses: julia-actions/cache@v2
-
-            - name: Setup Quarto
-              uses: quarto-dev/quarto-actions/setup@v2
-
-            - name: Install docs environment
-              run: |
-                  julia --project=docs -e '
-                      using Pkg
-                      Pkg.develop(PackageSpec(path=pwd()))
-                      Pkg.instantiate()
-                  '
-
-            - name: Render example
-              run: quarto render docs/example.qmd
-
-            - name: Upload rendered docs
+            - name: Upload committed docs
               uses: actions/upload-artifact@v4
               with:
                   name: docs-example
                   path: |
-                      docs/example.md
+                      docs/index.html
                       docs/example_files/
-
-            - name: Prepare GitHub Pages site
-              if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-              run: |
-                  mkdir -p _site
-                  cp docs/example.md _site/index.md
-                  cp -r docs/example_files _site/example_files
 
             - name: Deploy to GitHub Pages
               if: github.event_name == 'push' && github.ref == 'refs/heads/main'
               uses: peaceiris/actions-gh-pages@v4
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-                  publish_dir: _site
+                  publish_dir: docs
                   publish_branch: gh-pages
                   force_orphan: true
