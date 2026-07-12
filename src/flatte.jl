@@ -43,22 +43,28 @@ threshold(::Other) = -Inf
 reduced_mass(channel::DxD) = channel.mD * channel.mDˣ / (channel.mD + channel.mDˣ)
 
 """
-    MomentumSheet(label)
-    MomentumSheet(signs)
+    MomentumSheet(label; where=2)
+    MomentumSheet(signs; where=2)
 
 Riemann sheet for the two elastic Dˣ⁰D⁰ and Dˣ⁺D⁺ momenta. The first sign is
 the neutral-channel momentum sign and the second sign is the charged-channel
 momentum sign. Sheet labels follow `(I, II, III, IV) = ((+,+), (-,+), (-,-), (+,-))`.
+The `where` flag controls where the neutral Dˣ⁰D⁰ momentum is continued:
+`1` leaves it on sheet I, `2` uses the requested sheet everywhere, `12` continues
+the lower half-plane, and `90` continues only the lower-right quadrant.
 """
-struct MomentumSheet{N}
+struct MomentumSheet{N,W}
     signs::NTuple{N,Int}
+    where::Int
 end
 
-function MomentumSheet(signs::NTuple{N,<:Integer}) where {N}
-    return MomentumSheet{N}(Tuple(sheet_sign.(signs)))
+function MomentumSheet(signs::NTuple{N,<:Integer}; where::Integer=2) where {N}
+    _where = continuation_where(where)
+    return MomentumSheet{N,_where}(Tuple(sheet_sign.(signs)), _where)
 end
 
-MomentumSheet(label::Symbol) = MomentumSheet(sheet_signs(Val(label)))
+MomentumSheet(label::Symbol; where::Integer=2) =
+    MomentumSheet(sheet_signs(Val(label)); where)
 
 sheet_sign(sign::Integer) =
     sign in (-1, 1) ? Int(sign) : throw(ArgumentError("sheet signs must be -1 or +1"))
@@ -68,12 +74,22 @@ sheet_signs(::Val{:II}) = (-1, +1)
 sheet_signs(::Val{:III}) = (-1, -1)
 sheet_signs(::Val{:IV}) = (+1, -1)
 
+continuation_where(where::Integer) =
+    where in (1, 2, 12, 90) ? Int(where) :
+    throw(ArgumentError("expected `where` to be 1, 2, 12, or 90; got $where"))
+
 momentum_argument(E, channel::DxD, reference_mass) =
     2 * reduced_mass(channel) * (E * 1e-3 - (threshold(channel) - reference_mass))
 
 k(E::Complex, channel::DxD, reference_mass) =
     1im * sqrt(-momentum_argument(E, channel, reference_mass))
 k(E::Real, channel::DxD, reference_mass) = k(E + 1e-7im, channel, reference_mass)
+
+neutral_sign(sheet::MomentumSheet{2,1}, E) = +1
+neutral_sign(sheet::MomentumSheet{2,2}, E) = sheet.signs[1]
+neutral_sign(sheet::MomentumSheet{2,12}, E) = imag(E) < 0 ? sheet.signs[1] : +1
+neutral_sign(sheet::MomentumSheet{2,90}, E) =
+    real(E) > 0 && imag(E) < 0 ? sheet.signs[1] : +1
 
 """
     FlatteModel((; Ef_MeV, g, Γ₀_MeV, fρ, fω); particle_data=ParticleData())
@@ -152,8 +168,11 @@ function contribution_elastic(
 )
     channels = (model.channels[1], model.channels[2])
     reference_mass = neutral_threshold(model)
-    return 0.5im * model.g *
-           sum(sign * k(E, channel, reference_mass) for (sign, channel) in zip(sheet.signs, channels))
+    momenta = (
+        neutral_sign(sheet, E) * k(E, channels[1], reference_mass),
+        sheet.signs[2] * k(E, channels[2], reference_mass),
+    )
+    return 0.5im * model.g * sum(momenta)
 end
 
 """

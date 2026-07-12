@@ -101,6 +101,19 @@ end
     @test denominator(model, E) ≈ expected
 end
 
+@testset "Neutral continuation areas" begin
+    ϵ = 1e-9im
+    sheet_II = MomentumSheet(:II; where = 2)
+    lower_half_sheet = MomentumSheet(:II; where = 12)
+    lower_right_sheet = MomentumSheet(:II; where = 90)
+
+    @test X3872Flatte.neutral_sign(sheet_II, -1.0 - ϵ) == -1
+    @test X3872Flatte.neutral_sign(lower_half_sheet, -1.0 - ϵ) == -1
+    @test X3872Flatte.neutral_sign(lower_half_sheet, -1.0 + ϵ) == +1
+    @test X3872Flatte.neutral_sign(lower_right_sheet, +1.0 - ϵ) == -1
+    @test X3872Flatte.neutral_sign(lower_right_sheet, -1.0 - ϵ) == +1
+end
+
 @testset "Pole-coordinate reparametrization" begin
     sheet = MomentumSheet(:II)
     pole_MeV = -0.25 - 0.18im
@@ -114,19 +127,19 @@ end
     @test model.Ef_MeV == pars.Ef_MeV
     @test model.Γ₀_MeV == pars.Γ₀_MeV
 
-    sheet_iv = MomentumSheet(:IV)
-    sheet_iv_pole_MeV = 1.5 + 0.35im
-    sheet_iv_model = PoleReparametrizeFlatte(;
-        pole_re_MeV = real(sheet_iv_pole_MeV),
-        pole_im_MeV = imag(sheet_iv_pole_MeV),
+    left_cut_sheet = MomentumSheet(:IV; where = 12)
+    left_cut_pole_MeV = -1.5 + 0.35im
+    left_cut_model = PoleReparametrizeFlatte(;
+        pole_re_MeV = real(left_cut_pole_MeV),
+        pole_im_MeV = imag(left_cut_pole_MeV),
         g = 0.11,
         particle_data = default_particle_data,
-        sheet = sheet_iv,
+        sheet = left_cut_sheet,
     )
 
-    @test denominator(sheet_iv_model, sheet_iv_pole_MeV, sheet_iv) ≈ 0.0 atol = 1e-12
-    @test pole_position(sheet_iv_model, sheet_iv, sheet_iv_pole_MeV) ≈
-          sheet_iv_pole_MeV atol = 1e-6
+    @test denominator(left_cut_model, left_cut_pole_MeV, left_cut_sheet) ≈ 0.0 atol = 1e-12
+    @test pole_position(left_cut_model, left_cut_sheet, left_cut_pole_MeV) ≈
+          left_cut_pole_MeV atol = 1e-6
 end
 
 @testset "Complex elastic masses" begin
