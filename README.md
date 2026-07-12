@@ -10,6 +10,11 @@ It's a non-relativistic Breit-Wigner function that parametrizes the energy-depen
 - the J/ψ ρ and J/ψ ω channels with 2π and 3π resonances, and
 - a constant inelastic contribution accumulating all other channels.
 
+The transition amplitude is implemented as `A(E) = 1 / D(E)`, with
+`D(E) = (E - Ef) / 1000 + i g (k0(E) + k+(E)) / 2 + i Γ0 / 2000` for the
+three-channel elastic model. The five-channel model adds the `J/ψρ` and `J/ψω`
+inelastic denominator terms.
+
 ## Installation
 
 Install the package using Julia's package manager:

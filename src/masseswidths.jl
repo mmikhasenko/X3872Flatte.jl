@@ -4,18 +4,23 @@
 Particle masses and widths used by the X(3872) Flatte model, in GeV.
 Default values come from the PDG@2020.
 """
-@with_kw struct ParticleData
+@with_kw struct ParticleData{
+    TD⁰<:Number,
+    TD⁺<:Number,
+    TDˣ⁺<:Number,
+    TDˣ⁰<:Number,
+}
     mJψ::Float64 = 3096.90e-3 # GeV
     mχc₁::Float64 = 3871.65e-3 # GeV mass from J/ψ mode
-    mD⁰::Float64 = 1864.83e-3 # GeV
-    mD⁺::Float64 = 1869.58e-3 # GeV
+    mD⁰::TD⁰ = 1864.83e-3 # GeV
+    mD⁺::TD⁺ = 1869.58e-3 # GeV
     mπ::Float64 = 139.57e-3 # GeV
     mρ::Float64 = 775.49e-3 # GeV Neutral only mass
     mω::Float64 = 782.65e-3 # GeV
     Γρ::Float64 = 149.1e-3 # GeV Neutral only width
     Γω::Float64 = 8.68e-3 # GeV
-    mDˣ⁺::Float64 = 2010.26e-3 # GeV
-    mDˣ⁰::Float64 = 2006.85e-3 # GeV
+    mDˣ⁺::TDˣ⁺ = 2010.26e-3 # GeV
+    mDˣ⁰::TDˣ⁰ = 2006.85e-3 # GeV
     ΓDˣ⁺::Float64 = 83.4e-6 # GeV
     ΓDˣ⁰::Float64 = 55.2e-6 # GeV
 end

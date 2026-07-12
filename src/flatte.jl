@@ -21,10 +21,14 @@ JpsiRho(particle_data::ParticleData) =
 JpsiOmega(particle_data::ParticleData) =
     JpsiOmega(particle_data.mJψ, particle_data.mπ, particle_data.mω, particle_data.Γω)
 
-struct DxD <: ElasticChannel
-    mDˣ::Float64
-    mD::Float64
-    DxD(mDˣ, mD) = new(Float64(mDˣ), Float64(mD))
+struct DxD{T<:Number} <: ElasticChannel
+    mDˣ::T
+    mD::T
+end
+
+function DxD(mDˣ::Number, mD::Number)
+    _mDˣ, _mD = promote(mDˣ, mD)
+    return DxD{typeof(_mDˣ)}(_mDˣ, _mD)
 end
 
 struct Other <: InelasticChannel end
@@ -38,8 +42,37 @@ threshold(::Other) = -Inf
 
 reduced_mass(channel::DxD) = channel.mD * channel.mDˣ / (channel.mD + channel.mDˣ)
 
+"""
+    MomentumSheet(label)
+    MomentumSheet(signs)
+
+Riemann sheet for the two elastic Dˣ⁰D⁰ and Dˣ⁺D⁺ momenta. The first sign is
+the neutral-channel momentum sign and the second sign is the charged-channel
+momentum sign. Sheet labels follow `(I, II, III, IV) = ((+,+), (-,+), (-,-), (+,-))`.
+"""
+struct MomentumSheet{N}
+    signs::NTuple{N,Int}
+end
+
+function MomentumSheet(signs::NTuple{N,<:Integer}) where {N}
+    return MomentumSheet{N}(Tuple(sheet_sign.(signs)))
+end
+
+MomentumSheet(label::Symbol) = MomentumSheet(sheet_signs(Val(label)))
+
+sheet_sign(sign::Integer) =
+    sign in (-1, 1) ? Int(sign) : throw(ArgumentError("sheet signs must be -1 or +1"))
+
+sheet_signs(::Val{:I}) = (+1, +1)
+sheet_signs(::Val{:II}) = (-1, +1)
+sheet_signs(::Val{:III}) = (-1, -1)
+sheet_signs(::Val{:IV}) = (+1, -1)
+
+momentum_argument(E, channel::DxD, reference_mass) =
+    2 * reduced_mass(channel) * (E * 1e-3 - (threshold(channel) - reference_mass))
+
 k(E::Complex, channel::DxD, reference_mass) =
-    1im * sqrt(-2 * reduced_mass(channel) * (E * 1e-3 - (threshold(channel) - reference_mass)))
+    1im * sqrt(-momentum_argument(E, channel, reference_mass))
 k(E::Real, channel::DxD, reference_mass) = k(E + 1e-7im, channel, reference_mass)
 
 """
@@ -52,13 +85,13 @@ When `fρ` and `fω` are supplied, the model contains five channels:
 Without `fρ` and `fω`, the model contains the three channels `DxD`, `DxD`,
 and `Other`.
 """
-struct FlatteModel{C<:Tuple}
+struct FlatteModel{C<:Tuple,P<:ParticleData}
     Ef_MeV::Float64
     g::Float64
     Γ₀_MeV::Float64
     fρ::Float64
     fω::Float64
-    particle_data::ParticleData
+    particle_data::P
     channels::C
 end
 
@@ -111,6 +144,17 @@ contribution_charged(model::FlatteModel, E) =
     0.5im * model.g * k(E, model.channels[2], neutral_threshold(model))
 contribution(model::FlatteModel, ::Type{Other}, E) =
     0.5im * model.Γ₀_MeV * 1e-3
+
+function contribution_elastic(
+    model::FlatteModel{<:Tuple{<:DxD,<:DxD,Other}},
+    E,
+    sheet::MomentumSheet{2},
+)
+    channels = (model.channels[1], model.channels[2])
+    reference_mass = neutral_threshold(model)
+    return 0.5im * model.g *
+           sum(sign * k(E, channel, reference_mass) for (sign, channel) in zip(sheet.signs, channels))
+end
 
 """
     shift_Ef(g, Ef_corr, particle_data)
@@ -226,6 +270,88 @@ The functional dependence is the same as for the Dˣ⁰ D̄⁰ → Dˣ⁰ D̄⁰
 """
 AJψππ(model::FlatteModel, E) = 1 / denominator(model::FlatteModel, E)
 
+function denominator(
+    model::FlatteModel{<:Tuple{<:DxD,<:DxD,Other}},
+    E,
+    sheet::MomentumSheet{2},
+)
+    return (E - model.Ef_MeV) * 1e-3 +
+           contribution_elastic(model, E, sheet) +
+           contribution(model, Other, E)
+end
+
+AJψππ(model::FlatteModel{<:Tuple{<:DxD,<:DxD,Other}}, E, sheet::MomentumSheet{2}) =
+    1 / denominator(model, E, sheet)
+
+"""
+    pole_parameters(pole_MeV, g; particle_data=ParticleData(), sheet=MomentumSheet(:II))
+
+Return the standard three-channel Flatte parameters `(Ef_MeV, Γ₀_MeV)` whose
+sheet-aware denominator vanishes at `pole_MeV`.
+
+The pole energy is in MeV relative to the neutral Dˣ⁰D⁰ threshold. The returned
+`Γ₀_MeV` follows the convention `Γ = -2 * imag(E_p)` when elastic loop
+contributions are absent.
+"""
+function pole_parameters(
+    pole_MeV::Number,
+    g;
+    particle_data=ParticleData(),
+    sheet::MomentumSheet{2}=MomentumSheet(:II),
+)
+    calibration_model = FlatteModel((; Ef_MeV=0.0, g, Γ₀_MeV=0.0); particle_data)
+    z_MeV = pole_MeV + 1e3 * contribution_elastic(calibration_model, pole_MeV, sheet)
+    return (; Ef_MeV=real(z_MeV), Γ₀_MeV=-2 * imag(z_MeV))
+end
+
+"""
+    PoleReparametrizeFlatte(pole_MeV, g; particle_data=ParticleData(), sheet=MomentumSheet(:II))
+    PoleReparametrizeFlatte(; pole_MeV, g, kwargs...)
+    PoleReparametrizeFlatte(; pole_re_MeV, pole_im_MeV, g, kwargs...)
+
+Build the three-channel `FlatteModel` from a target pole position and elastic
+coupling. The returned model has real `Ef_MeV` and `Γ₀_MeV` chosen so that
+`denominator(model, pole_MeV, sheet) == 0`, up to floating-point precision.
+"""
+function PoleReparametrizeFlatte(; particle_data=ParticleData(), sheet=MomentumSheet(:II), kwargs...)
+    pars = (; kwargs...)
+    haskey(pars, :pole_MeV) &&
+        return PoleReparametrizeFlatte((; pole_MeV=pars.pole_MeV, g=pars.g); particle_data, sheet)
+    return PoleReparametrizeFlatte((;
+        pole_re_MeV=pars.pole_re_MeV,
+        pole_im_MeV=pars.pole_im_MeV,
+        g=pars.g,
+    ); particle_data, sheet)
+end
+
+PoleReparametrizeFlatte(
+    pole_MeV::Number,
+    g;
+    particle_data=ParticleData(),
+    sheet::MomentumSheet{2}=MomentumSheet(:II),
+) =
+    PoleReparametrizeFlatte((; pole_MeV, g); particle_data, sheet)
+
+function PoleReparametrizeFlatte(
+    pars::NamedTuple{(:pole_MeV, :g)};
+    particle_data=ParticleData(),
+    sheet::MomentumSheet{2}=MomentumSheet(:II),
+)
+    @unpack pole_MeV, g = pars
+    (; Ef_MeV, Γ₀_MeV) = pole_parameters(pole_MeV, g; particle_data, sheet)
+    return FlatteModel((; Ef_MeV, g, Γ₀_MeV); particle_data)
+end
+
+function PoleReparametrizeFlatte(
+    pars::NamedTuple{(:pole_re_MeV, :pole_im_MeV, :g)};
+    particle_data=ParticleData(),
+    sheet::MomentumSheet{2}=MomentumSheet(:II),
+)
+    @unpack pole_re_MeV, pole_im_MeV, g = pars
+    return PoleReparametrizeFlatte((; pole_MeV=pole_re_MeV + 1im * pole_im_MeV, g);
+        particle_data, sheet)
+end
+
 """
     scattering_parameters(::Type{FlatteModel}, Ef_MeV, g, particle_data)
 
@@ -285,6 +411,22 @@ approaches zero.
 """
 function pole_position(model::FlatteModel, init=-1e3im * model.Γ₀_MeV / 10)
     fr = optimize(x -> abs2(denominator(model, x[1] + x[2] * 1im)), collect(reim(init)), BFGS())
+    minimum_reached = (fr.minimum < 1e-8)
+    !(minimum_reached) && error("Pole is not found: fr.minimum = $(fr.minimum)")
+    Epole = complex(fr.minimizer...) # MeV
+    return Epole
+end
+
+function pole_position(
+    model::FlatteModel{<:Tuple{<:DxD,<:DxD,Other}},
+    sheet::MomentumSheet{2},
+    init=-1e3im * model.Γ₀_MeV / 10,
+)
+    fr = optimize(
+        x -> abs2(denominator(model, x[1] + x[2] * 1im, sheet)),
+        collect(reim(init)),
+        BFGS(),
+    )
     minimum_reached = (fr.minimum < 1e-8)
     !(minimum_reached) && error("Pole is not found: fr.minimum = $(fr.minimum)")
     Epole = complex(fr.minimizer...) # MeV

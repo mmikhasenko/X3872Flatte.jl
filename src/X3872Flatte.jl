@@ -12,7 +12,9 @@ export ParticleData
 export FlatteModel
 export AbstractChannel, ElasticChannel, InelasticChannel
 export JpsiRho, JpsiOmega, DxD, Other, threshold
+export MomentumSheet
 export ReparametrizeFlatte
+export PoleReparametrizeFlatte, pole_parameters
 export compute_corrected_Ef
 export AJψππ, denominator
 export scattering_parameters
