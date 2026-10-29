@@ -52,8 +52,13 @@ end
     model = FlatteModel(;
         Ef_MeV = -8.8, g = 0.13, Γ₀_MeV = 1.8, fρ = 0.0, fω = 0.0,
         particle_data = default_particle_data)
-    E_pole = pole_position(model)
-    @test isapprox(E_pole, 0.0134358620 - 0.1152417753im, atol = 1e-7)
+    # Reference from an independent solve of real(D) = imag(D) = 0.
+    expected = 0.013421459703634639 - 0.11522493898086858im
+    for init in (-180.0im, 0.01 - 0.1im, -0.1 - 0.2im)
+        E_pole = pole_position(model, init)
+        @test isapprox(E_pole, expected; atol=1e-8, rtol=0)
+        @test abs(denominator(model, E_pole)) < 1e-10
+    end
 end
 
 @testset "Reparametrize Flatte" begin
