@@ -51,6 +51,11 @@ pole_E_MeV = pole_position(default_model)
 rho_fraction = dRρ(default_model)
 ```
 
+`pole_position` minimizes the squared denominator in MeV and checks that the
+denominator residual is below `1e-10` GeV before returning the pole energy in MeV.
+This avoids premature convergence caused by optimizing the small GeV-scale
+objective with a default gradient tolerance.
+
 The rendered tutorial is available at
 [mmikhasenko.github.io/X3872Flatte.jl](https://mmikhasenko.github.io/X3872Flatte.jl/).
 

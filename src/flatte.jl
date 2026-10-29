@@ -273,8 +273,9 @@ scattering_parameters(model::FlatteModel) =
     pole_position(model::FlatteModel, init = -1e3im * model.Γ₀_MeV / 10)
 
 Finds the position of the pole singularity of the Flatte amplitude using numerical optimization.
-The gradient descent method (BFGS) is used to locate the complex energy where the denominator
-approaches zero.
+The BFGS method minimizes the squared denominator in MeV to avoid premature
+convergence from the small GeV scale. The returned pole must have a denominator
+residual below `1e-10` GeV.
 
 # Arguments
 - `model::FlatteModel`: The Flatte model parameters
@@ -284,9 +285,11 @@ approaches zero.
 - `Epole::Complex`: Complex energy position of the pole in MeV
 """
 function pole_position(model::FlatteModel, init=-1e3im * model.Γ₀_MeV / 10)
-    fr = optimize(x -> abs2(denominator(model, x[1] + x[2] * 1im)), collect(reim(init)), BFGS())
-    minimum_reached = (fr.minimum < 1e-8)
-    !(minimum_reached) && error("Pole is not found: fr.minimum = $(fr.minimum)")
-    Epole = complex(fr.minimizer...) # MeV
+    fr = optimize(
+        x -> abs2(1e3 * denominator(model, complex(x...))),
+        collect(Float64, reim(init)), BFGS(), Optim.Options(g_abstol=1e-12))
+    Epole = complex(Optim.minimizer(fr)...) # MeV
+    residual = abs(denominator(model, Epole))
+    residual < 1e-10 || error("Pole is not found: denominator residual = $residual GeV")
     return Epole
 end
